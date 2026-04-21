@@ -1,0 +1,14 @@
+begin 
+num1 = random 
+guess = 0
+attempts = 0
+
+display "think of a number btw 1 and 100
+
+while guess != sercet_number:
+
+accept user data
+
+error handling 
+
+guess = num1(user)
