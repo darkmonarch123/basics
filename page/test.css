@@ -12,6 +12,8 @@ body{
      color: #333;
      line-height: 1.6;
 }
+
+/* Navigation  */
 nav{
      position: fixed;
      top: 0;
@@ -34,17 +36,7 @@ nav a{
 nav a:hover{
      color: #0984e3;
 }
-/* div{
-     height: 100vh;
-     display: flex;
-     align-items: center;
-     justify-content: center;
-     font-size: 4rem;
-     font-weight: bold;
-     color:white;
-     text-transform: uppercase;
-     letter-spacing: 5px;
-} */
+
 
 #Home, #About, #Contact, #Blog {
      min-height: 100vh; /* Use min-height so it can grow if content is long */
