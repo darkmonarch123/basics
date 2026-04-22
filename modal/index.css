@@ -1,0 +1,31 @@
+:root{
+     --modal-bg:#fff;
+     --backdrop-color:rgba(0,0,0,0.5);
+}
+
+.modal{
+     border: none;
+     border-radius: 8px;
+     padding: 0;
+     box-shadow: 0 120px 25px  rgba(0,0,0,0.2);
+     max-width: 500px;
+     width: 90%;
+}
+
+.modal::backdrop{
+     background-color: var(--backdrop-color);
+     backdrop-filter: blur(4px);
+}
+.modal-content{
+     padding: 2rem;
+}
+.modal[open]{
+     animation: slideIn 0.3s ease-out;
+}
+@keyframes slideIn{
+     from{
+          opacity: 0; transform: translateY(-20px);
+     }to{
+      opacity: 0;  transform: translateY(0);
+     }
+}
