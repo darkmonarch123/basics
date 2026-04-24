@@ -14,15 +14,12 @@ closeBtn.addEventListener('click',()=>{
 
 //close on clicking the modal
 modal.addEventListener('click',(e)=>{
-     if(
-          e.clientX < dialogDimesions.Left 
-          ||
-          e.clientX < dialogDimesions.Right
-          ||  
-          e.clientX < dialogDimesions.Top
-          ||
-          e.clientX < dialogDimesions.Bottom
-     ){
-          modal.close();
-     }
+  const rect =  modal.getBoundingClientRect();
+
+  const clickedOustide =(
+     e.clientX < rect.left ||  e.clientX > rect.left || e.clientY < rect.Top  || e.clientY > rect.bottom
+    );
+    if(clickedOustide){
+     modal.close();
+    }
 })
