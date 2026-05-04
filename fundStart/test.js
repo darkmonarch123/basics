@@ -1,0 +1,445 @@
+/*
+  Feedflow (Level 2)
+  - Default user with zero balance/loan on startup
+  - Account switching (persisted)
+  - Add funds / Withdraw funds (update user balance in users array)
+  - Transaction history (saved to localStorage)
+  - Loan request (adds to balance and loan amount) + Loan repayment (reduces loan and balance)
+  - All persisted in localStorage under key 'palmpay_lite_v1'
+*/
+
+// ---------- Constants & Helpers ----------
+const STORAGE_KEY = 'palmpay_lite_v1';
+
+function uid(prefix = '') {
+  return prefix + Date.now().toString(36) + Math.random().toString(36).slice(2,8);
+}
+function formatCurrency(n){
+  // ensure integer/float to string with commas
+  const num = Number(n) || 0;
+  return '₦' + num.toLocaleString();
+}
+function nowISOString(){ return new Date().toISOString(); }
+
+// ---------- Initial data ----------
+const shippedData = {
+  users: [
+    { id: 'u1', name: 'Emmanuel', balance: 100000, loan: 0 },
+    { id: 'u2', name: 'FeedFlow', balance: 100000000, loan: 0 },
+    { id: 'u3', name: 'Richard', balance: 300000, loan: 600056 },
+    { id: 'u4', name: 'Brian', balance: 300000, loan: 6006 },
+    { id: 'u5', name: 'jeffery', balance: 300000, loan: 656 },
+    { id: 'u6', name: 'Peace', balance: 300000, loan: 656 },
+    { id: 'u7', name: 'Oba', balance: 300000, loan: 60000 },
+    { id: 'u8', name: 'Tegzy', balance: 300000, loan: 99956 },
+    { id: 'u9', name: 'Daniel', balance: 300000, loan: 656 },
+    { id: 'u10', name: 'bolu', balance: 300000, loan: 656 },
+    { id: 'u11', name: 'Elliot', balance: 300000, loan: 656 },
+    { id: 'u12', name: 'David', balance: 300000, loan: 656 },
+    { id: 'u13', name: 'Ruben', balance: 300000, loan: 656 },
+    { id: 'u14', name: 'Abayo', balance: 300000, loan: 656 },
+    { id: 'u15', name: 'Olamide', balance: 300000, loan: 656 },
+    { id: 'u16', name: 'Emmanuel', balance: 300000, loan: 656 },
+    { id: 'u17', name: 'FeedflowInc', balance: 30000000000, loan: 0 },
+  ],
+  // We'll keep transactions array global and filter by userId when rendering
+  transactions: [],
+  settings: {
+    // currently selected user id; default is 'default-user' with zero balance and loan
+    selectedUserId: 'default-user'
+  }
+};
+
+// ---------- Storage functions ----------
+function loadState(){
+  const raw = localStorage.getItem(STORAGE_KEY);
+  if(!raw) {
+    // create default state including default user
+    const defaultUser = { id: 'default-user', name: 'User', balance: 0, loan: 0 };
+    const state = {
+      users: [defaultUser, ...shippedData.users],
+      transactions: [],
+      settings: { selectedUserId: 'default-user' }
+    };
+    saveState(state);
+    return state;
+  }
+  try {
+    return JSON.parse(raw);
+  } catch(e){
+    console.error('Corrupt localStorage; resetting', e);
+    localStorage.removeItem(STORAGE_KEY);
+    return loadState();
+  }
+}
+
+function saveState(state){
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+}
+
+// ---------- App State ----------
+let state = loadState();
+
+// Helper to get current user object (by reference)
+function getCurrentUser(){
+  return state.users.find(u => u.id === state.settings.selectedUserId);
+}
+
+// ---------- Render functions ----------
+const contentEl = document.getElementById('content');
+const greetingEl = document.getElementById('greeting');
+const tabsEl = document.getElementById('tabs');
+
+function setActiveTab(name){
+  [...tabsEl.children].forEach(t => t.classList.toggle('active', t.dataset.tab === name));
+}
+
+function render(){
+  const tab = [...tabsEl.children].find(t => t.classList.contains('active'))?.dataset.tab || 'dashboard';
+  switch(tab){
+    case 'dashboard': renderDashboard(); break;
+    case 'history': renderHistory(); break;
+    case 'loan': renderLoan(); break;
+    case 'settings': renderSettings(); break;
+    default: renderDashboard();
+  }
+}
+
+function updateGreeting(){
+  const user = getCurrentUser();
+  greetingEl.textContent = `hi, ${user ? user.name : 'User'}`;
+}
+
+function renderDashboard(){
+  setActiveTab('dashboard');
+  const user = getCurrentUser();
+  updateGreeting();
+
+  contentEl.innerHTML = `
+    <div class="top-cards">
+      <div class="card">
+        <h3>Balance</h3>
+        <div style="font-size:1.6rem;font-weight:700;margin-top:.4rem" id="balance-display">${formatCurrency(user.balance)}</div>
+      </div>
+      <div class="card">
+        <h3>Loan</h3>
+        <div style="font-size:1.4rem;font-weight:700;margin-top:.4rem" id="loan-display">${formatCurrency(user.loan)}</div>
+      </div>
+    </div>
+
+    <div class="grid">
+      <div class="panel">
+        <h4>Add / Withdraw</h4>
+        <div class="controls" style="margin-top:.75rem">
+          <input id="amt-input" type="number" min="1" placeholder="Amount"/>
+          <button id="add-btn">Add Funds</button>
+          <button id="withdraw-btn" class="small-btn">Withdraw</button>
+          <div id="op-message" class="muted" style="margin-left:auto"></div>
+        </div>
+
+        <hr style="margin:1rem 0">
+
+        <h4>Quick Actions</h4>
+        <div style="margin-top:.6rem;display:flex;gap:.5rem;flex-wrap:wrap">
+          <button id="quick-100" class="small-btn">+1000</button>
+          <button id="quick-5000" class="small-btn">+5,000</button>
+          <button id="quick-10000" class="small-btn">+10,000</button>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h4>Recent Transactions</h4>
+        <div id="recent-list" style="margin-top:.5rem;max-height:260px;overflow:auto">
+          <!-- recent txns -->
+        </div>
+      </div>
+    </div>
+  `;
+
+  // attach listeners
+  document.getElementById('add-btn').addEventListener('click', handleAdd);
+  document.getElementById('withdraw-btn').addEventListener('click', handleWithdraw);
+  document.getElementById('amt-input').addEventListener('keydown', (e)=>{ if(e.key === 'Enter') handleAdd(); });
+  document.getElementById('quick-100').addEventListener('click', ()=>quickAdd(1000));
+  document.getElementById('quick-5000').addEventListener('click', ()=>quickAdd(5000));
+  document.getElementById('quick-10000').addEventListener('click', ()=>quickAdd(10000));
+
+  renderRecentTransactions();
+}
+
+function renderRecentTransactions(){
+  const recentEl = document.getElementById('recent-list');
+  const user = getCurrentUser();
+  const txns = state.transactions.filter(t=>t.userId === user.id).slice().reverse().slice(0,8);
+  if(txns.length === 0){
+    recentEl.innerHTML = `<div class="muted">No transactions yet</div>`;
+    return;
+  }
+  recentEl.innerHTML = txns.map(t => `
+    <div class="history-item">
+      <div style="flex:1">
+        <div style="font-weight:600">${t.type} ${t.type === 'Loan' || t.type === 'Deposit' ? formatCurrency(t.amount) : formatCurrency(t.amount)}</div>
+        <div class="muted" style="font-size:.85rem">${new Date(t.date).toLocaleString()}</div>
+      </div>
+      <div style="min-width:100px;text-align:right">
+        <div style="font-weight:700">${t.balanceAfter !== undefined ? formatCurrency(t.balanceAfter) : ''}</div>
+      </div>
+    </div>
+  `).join('');
+}
+
+function renderHistory(){
+  setActiveTab('history');
+  const user = getCurrentUser();
+  updateGreeting();
+
+  const txns = state.transactions.filter(t => t.userId === user.id).slice().reverse();
+  contentEl.innerHTML = `
+    <div class="panel">
+      <h3>Transaction History — ${user.name}</h3>
+      <div style="margin-top:.6rem">
+        ${txns.length === 0 ? '<div class="muted">No transactions yet</div>' : txns.map(t => `
+          <div class="history-item">
+            <div>
+              <div style="font-weight:600">${t.type} ${formatCurrency(t.amount)}</div>
+              <div class="muted" style="font-size:.85rem">${new Date(t.date).toLocaleString()}</div>
+            </div>
+            <div style="text-align:right">
+              <div style="font-weight:700">${formatCurrency(t.balanceAfter)}</div>
+              <div class="muted" style="font-size:.8rem">${t.note || ''}</div>
+            </div>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+  `;
+}
+
+function renderLoan(){
+  setActiveTab('loan');
+  const user = getCurrentUser();
+  updateGreeting();
+
+  contentEl.innerHTML = `
+    <div class="grid">
+      <div class="panel">
+        <h3>Loan Center</h3>
+        <p class="muted">You can request a loan (instant). Loans must be repaid from your balance.</p>
+        <div style="margin-top:.8rem;display:flex;gap:.6rem;align-items:center">
+          <input type="number" id="loan-amt" min="1" placeholder="Loan amount"/>
+          <button id="request-loan">Request Loan</button>
+          <button id="repay-loan" class="small-btn">Repay Loan</button>
+          <div id="loan-msg" class="muted" style="margin-left:auto"></div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h4>Loan Summary</h4>
+        <div style="margin-top:.6rem">
+          <div style="display:flex;justify-content:space-between;padding:.5rem 0"><div>Outstanding Loan</div><div id="loan-summary">${formatCurrency(user.loan)}</div></div>
+          <div style="display:flex;justify-content:space-between;padding:.5rem 0"><div>Balance</div><div id="bal-summary">${formatCurrency(user.balance)}</div></div>
+        </div>
+      </div>
+    </div>
+  `;
+
+  document.getElementById('request-loan').addEventListener('click', handleRequestLoan);
+  document.getElementById('repay-loan').addEventListener('click', handleRepayLoan);
+}
+
+// Settings (switch accounts)
+function renderSettings(){
+  setActiveTab('settings');
+  const user = getCurrentUser();
+  updateGreeting();
+
+  const options = state.users.map(u => `<option value="${u.id}" ${u.id === user.id ? 'selected' : ''}>${u.name} ${u.id==='default-user' ? '(default)' : ''}</option>`).join('');
+
+  contentEl.innerHTML = `
+    <div class="panel">
+      <h3>Settings</h3>
+      <div style="margin-top:.8rem">
+        <label>Switch Account</label><br/>
+        <select id="switch-account">${options}</select>
+        <div style="margin-top:.6rem">
+          <button id="add-user" class="small-btn">Create New Account</button>
+          <button id="delete-user" class="small-btn">Delete Current Account</button>
+        </div>
+      </div>
+    </div>
+  `;
+  document.getElementById('switch-account').addEventListener('change', (e)=>{
+    state.settings.selectedUserId = e.target.value;
+    saveState(state);
+    // Automatically open dashboard after switching per your requirement
+    renderDashboard();
+  });
+
+  document.getElementById('add-user').addEventListener('click', ()=>{
+    const name = prompt('New account name (e.g., "John")');
+    if(name && name.trim()){
+      const newUser = { id: uid('u_'), name: name.trim(), balance: 0, loan: 0 };
+      state.users.push(newUser);
+      state.settings.selectedUserId = newUser.id;
+      saveState(state);
+      renderSettings(); // re-render to update options
+      renderDashboard();
+    }
+  });
+
+  document.getElementById('delete-user').addEventListener('click', ()=>{
+    const cur = getCurrentUser();
+    if(!cur) return;
+    if(cur.id === 'default-user'){
+      alert('Default user cannot be deleted.');
+      return;
+    }
+    if(!confirm(`Delete account "${cur.name}"? This removes its transactions as well.`)) return;
+    // remove user and their transactions
+    state.users = state.users.filter(u=>u.id !== cur.id);
+    state.transactions = state.transactions.filter(t=>t.userId !== cur.id);
+    // fall back to default user
+    state.settings.selectedUserId = 'default-user';
+    saveState(state);
+    renderSettings();
+    renderDashboard();
+  });
+}
+
+// ---------- Action handlers ----------
+function pushTransaction(userId, type, amount, note){
+  const user = state.users.find(u=>u.id===userId);
+  const txn = {
+    id: uid('txn_'),
+    userId,
+    type,
+    amount: Number(amount),
+    note: note || '',
+    date: nowISOString(),
+    balanceAfter: user ? Number(user.balance) : undefined
+  };
+  state.transactions.push(txn);
+  saveState(state);
+}
+
+function handleAdd(){
+  const valEl = document.getElementById('amt-input');
+  const msgEl = document.getElementById('op-message');
+  msgEl.textContent = '';
+  const amt = Number(valEl.value);
+  if(!amt || amt <= 0){ msgEl.textContent = 'Enter positive amount'; return; }
+  const user = getCurrentUser();
+  user.balance = Number(user.balance) + amt;
+  // record transaction
+  pushTransaction(user.id, 'Deposit', amt, 'Added funds');
+  saveState(state);
+  // UI update
+  document.getElementById('balance-display').textContent = formatCurrency(user.balance);
+  renderRecentTransactions();
+  valEl.value = '';
+  msgEl.textContent = 'Added ✓';
+  setTimeout(()=>{ if(msgEl) msgEl.textContent=''; },1500);
+}
+
+function quickAdd(amount){
+  const user = getCurrentUser();
+  user.balance = Number(user.balance) + Number(amount);
+  pushTransaction(user.id, 'Deposit', amount, 'Quick add');
+  saveState(state);
+  // re-render balance and recent
+  if(document.getElementById('balance-display')) document.getElementById('balance-display').textContent = formatCurrency(user.balance);
+  renderRecentTransactions();
+}
+
+function handleWithdraw(){
+  const valEl = document.getElementById('amt-input');
+  const msgEl = document.getElementById('op-message');
+  msgEl.textContent = '';
+  const amt = Number(valEl.value);
+  if(!amt || amt <= 0){ msgEl.textContent = 'Enter positive amount'; return; }
+  const user = getCurrentUser();
+  if(amt > user.balance){
+    msgEl.textContent = 'Insufficient funds';
+    return;
+  }
+  user.balance = Number(user.balance) - amt;
+  pushTransaction(user.id, 'Withdrawal', amt, 'User withdrew');
+  saveState(state);
+  document.getElementById('balance-display').textContent = formatCurrency(user.balance);
+  renderRecentTransactions();
+  valEl.value = '';
+  msgEl.textContent = 'Withdrawn ✓';
+  setTimeout(()=>{ if(msgEl) msgEl.textContent=''; },1500);
+}
+
+function handleRequestLoan(){
+  const amtEl = document.getElementById('loan-amt');
+  const msgEl = document.getElementById('loan-msg');
+  msgEl.textContent = '';
+  const amt = Number(amtEl.value);
+  if(!amt || amt <= 0){ msgEl.textContent = 'Enter positive loan amount'; return; }
+  const user = getCurrentUser();
+  // For simplicity: always approve. Add to loan and balance.
+  user.loan = Number(user.loan) + amt;
+  user.balance = Number(user.balance) + amt;
+  pushTransaction(user.id, 'Loan', amt, 'Loan requested and credited');
+  saveState(state);
+  // update UI
+  if(document.getElementById('loan-summary')) document.getElementById('loan-summary').textContent = formatCurrency(user.loan);
+  if(document.getElementById('bal-summary')) document.getElementById('bal-summary').textContent = formatCurrency(user.balance);
+  renderRecentTransactions();
+  amtEl.value = '';
+  msgEl.textContent = 'Loan credited ✓';
+  setTimeout(()=>{ if(msgEl) msgEl.textContent=''; },1600);
+}
+
+function handleRepayLoan(){
+  const amtEl = document.getElementById('loan-amt');
+  const msgEl = document.getElementById('loan-msg');
+  msgEl.textContent = '';
+  const amt = Number(amtEl.value);
+  if(!amt || amt <= 0){ msgEl.textContent = 'Enter positive amount to repay'; return; }
+  const user = getCurrentUser();
+  if(user.balance < amt){
+    msgEl.textContent = 'Insufficient balance to repay';
+    return;
+  }
+  if(user.loan <= 0){
+    msgEl.textContent = 'No outstanding loan';
+    return;
+  }
+  const repayAmt = Math.min(amt, user.loan);
+  user.loan = Number(user.loan) - repayAmt;
+  user.balance = Number(user.balance) - repayAmt;
+  pushTransaction(user.id, 'Repayment', repayAmt, 'Loan repayment');
+  saveState(state);
+  if(document.getElementById('loan-summary')) document.getElementById('loan-summary').textContent = formatCurrency(user.loan);
+  if(document.getElementById('bal-summary')) document.getElementById('bal-summary').textContent = formatCurrency(user.balance);
+  renderRecentTransactions();
+  amtEl.value = '';
+  msgEl.textContent = `Repaid ${formatCurrency(repayAmt)} ✓`;
+  setTimeout(()=>{ if(msgEl) msgEl.textContent=''; },1600);
+}
+
+// ---------- Tab click handling ----------
+tabsEl.addEventListener('click', (e)=>{
+  const tab = e.target.closest('.tab');
+  if(!tab) return;
+  [...tabsEl.children].forEach(t => t.classList.remove('active'));
+  tab.classList.add('active');
+  render();
+});
+
+// ---------- Init ----------
+function init(){
+  // ensure current selected user exists
+  if(!state.users.some(u=>u.id === state.settings.selectedUserId)){
+    state.settings.selectedUserId = state.users[0].id;
+    saveState(state);
+  }
+  updateGreeting();
+  render(); // show dashboard by default
+}
+
+init();
+

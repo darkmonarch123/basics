@@ -1,0 +1,47 @@
+#content-box{
+     display: flex;
+     justify-content: center;
+     margin-top: 35px;
+}
+#box1{
+     background-color: red;
+     width: 100px;
+     height: 100px;
+     border-radius: 10px;
+     padding: 10px;
+     animation-name: motion;
+     animation-duration: 3s;
+     animation-iteration-count: infinite;
+     /* animation-timing-function: cubic-bezier(0.075, 0.82, 0.165, 1); */
+}
+#box2{
+     background-color: blue;
+     width: 100px;
+     height: 100px;
+     border-radius: 10px;
+     display: flex;
+     padding: 10px;
+     margin-left: 20px;
+}
+
+@keyframes motion{
+     0%{
+          /* opacity: 1; */
+          rotate: 45deg;
+          /* scale: 2; */
+     }
+     25%{
+          /* opacity: 0.75; */
+          rotate: 90deg;
+     }50%{
+          /* opacity: 0.50; */
+          rotate: 180deg;
+     }
+     75%{
+          /* opacity: 0.25; */
+          rotate: 270deg;
+     }100%{
+          /* opacity: 0; */
+          rotate:360deg;
+     }
+}

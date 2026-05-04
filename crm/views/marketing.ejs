@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>FeedbackFlow | Capture Customer Insights</title>
+    <style>
+    :root {
+        --primary: #2563eb;
+        --primary-hover: #1d4ed8;
+        --bg: #f8fafc;
+        --card-bg: #ffffff;
+        --text-main: #0f172a;
+        --text-muted: #64748b;
+        --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    /* Entrance Animation */
+    @keyframes fadeInUp {
+        from { opacity: 0; transform: translateY(20px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+
+    body { 
+        font-family: 'Inter', system-ui, sans-serif; 
+        margin: 0; background: var(--bg); color: var(--text-main);
+        animation: fadeInUp 0.6s ease-out;
+    }
+
+    /* Layout */
+    .container { display: flex; height: 100vh; }
+    
+    nav { 
+        width: 260px; background: #0f172a; color: white; padding: 30px 20px;
+        box-shadow: 4px 0 10px rgba(0,0,0,0.05);
+    }
+
+    main { flex-grow: 1; padding: 50px; overflow-y: auto; }
+
+    /* Modern SaaS Cards */
+    .stats-grid { 
+        display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); 
+        gap: 25px; margin-bottom: 40px; 
+    }
+
+    .card { 
+        background: var(--card-bg); padding: 25px; border-radius: 16px;
+        border: 1px solid #e2e8f0; transition: var(--transition);
+        animation: fadeInUp 0.8s ease-out;
+    }
+
+    .card:hover { 
+        transform: translateY(-5px); 
+        box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+        border-color: var(--primary);
+    }
+
+    /* Dashboard Logic: Typography */
+    .card h4 { margin: 0 0 10px 0; color: var(--text-muted); font-size: 0.9rem; text-transform: uppercase; letter-spacing: 0.05em; }
+    .card .value { font-size: 2.2rem; font-weight: 800; color: var(--text-main); }
+
+    /* Button Styling */
+    .cta-btn {
+        background: var(--primary); color: white; padding: 12px 24px;
+        border-radius: 8px; text-decoration: none; font-weight: 600;
+        display: inline-block; transition: var(--transition);
+        border: none; cursor: pointer;
+    }
+
+    .cta-btn:hover { background: var(--primary-hover); transform: scale(1.05); }
+
+    /* Animated Table */
+    table { width: 100%; border-collapse: separate; border-spacing: 0 10px; }
+    tr { transition: var(--transition); }
+    tr:hover td { background: #f1f5f9; }
+    td { padding: 16px; background: white; }
+    td:first-child { border-radius: 10px 0 0 10px; }
+    td:last-child { border-radius: 0 10px 10px 0; }
+
+    /* Code Block Styling */
+    .code-block { 
+        background: #1e293b; color: #38bdf8; padding: 20px; 
+        border-radius: 12px; font-family: 'Fira Code', monospace; font-size: 0.85rem;
+        position: relative; overflow: hidden;
+    }
+</style>
+</head>
+<body>
+
+    
+    <header style="background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%); min-height: 80vh; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+    <div style="background: rgba(255, 255, 255, 0.7); backdrop-filter: blur(10px); padding: 60px; border-radius: 30px; border: 1px solid white; box-shadow: 0 20px 50px rgba(0,0,0,0.05);">
+        <h1 style="font-size: 4rem; background: linear-gradient(to right, #2563eb, #7c3aed); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">FeedbackFlow</h1>
+        <p style="max-width: 600px; margin: 0 auto 30px;">The customer intelligence platform for high-growth startups.</p>
+        <a href="/dashboard" class="cta-btn">Create Your CEO Account</a>
+    </div>
+</header>
+    
+
+    <div class="pricing">
+        <div class="tier">
+            <h3>Free</h3>
+            <div class="price">$0/mo</div>
+            <p>100 responses/month</p>
+            <p>Basic Widget</p>
+        </div>
+        <div class="tier" style="border-color: #2563eb; background: #eff6ff;">
+            <h3>Pro</h3>
+            <div class="price">$49/mo</div>
+            <p>Unlimited responses</p>
+            <p>Custom colors & AI</p>
+        </div>
+    </div>
+
+</body>
+</html>

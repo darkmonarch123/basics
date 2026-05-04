@@ -1,0 +1,22 @@
+.container{
+    width: 100vw;
+    height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+.circle-box{
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 20px;
+    min-height: 400px;
+}
+
+.circle{
+    background-color: #000000;
+    color: white;
+    border-radius: 60%;
+    padding: 12px;
+    font-size: 2rem;
+}
